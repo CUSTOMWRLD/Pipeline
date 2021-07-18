@@ -1,6 +1,9 @@
 package com.customwrld.pipeline;
 
+import com.customwrld.commonlib.CommonLib;
 import com.customwrld.pigeon.Pigeon;
+import com.mongodb.MongoClient;
+import com.mongodb.client.MongoDatabase;
 import lombok.Getter;
 import lombok.NonNull;
 import net.kyori.adventure.platform.bungeecord.BungeeAudiences;
@@ -15,21 +18,16 @@ public final class Pipeline extends Plugin {
 
     @Getter private static Pipeline pipeline;
     private Pigeon pigeon;
-    private BungeeCordComponentSerializer adventure;
     private Set<ServerInfo> onlineServers;
 
-    public @NonNull BungeeAudiences adventure() {
-        if(this.adventure == null) {
-            throw new IllegalStateException("Cannot retrieve audience provider while plugin is not enabled");
-        }
-        return this.adventure;
-    }
+    private MongoClient mongoClient;
+    private MongoDatabase mongoDatabase;
+
+    private CommonLib commonLib;
 
     @Override
     public void onEnable() {
         pipeline = this;
-
-        this.adventure = BungeeAudiences.create(this);
 
         this.pigeon = new Pigeon();
 
@@ -42,6 +40,11 @@ public final class Pipeline extends Plugin {
         this.onlineServers = new HashSet<>();
 
         Listeners.setPigeon(this.pigeon);
+
+        this.mongoClient = new MongoClient("127.0.0.1", 27017);
+        this.mongoDatabase = this.mongoClient.getDatabase("CUSTOMWRLD");
+
+        this.commonLib = new CommonLib(this.mongoClient, this.mongoDatabase, this.pigeon);
 
         getProxy().getPluginManager().registerListener(this, new Listeners());
 
@@ -63,11 +66,6 @@ public final class Pipeline extends Plugin {
     }
 
     @Override
-    public void onDisable() {
-        if(this.adventure != null) {
-            this.adventure.close();
-            this.adventure = null;
-        }
-    }
+    public void onDisable() { }
 
 }

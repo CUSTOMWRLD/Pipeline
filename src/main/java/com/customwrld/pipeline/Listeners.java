@@ -14,6 +14,7 @@ import net.kyori.adventure.platform.bungeecord.BungeeAudiences;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.bungeecord.BungeeComponentSerializer;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
@@ -42,9 +43,9 @@ public class Listeners implements Listener {
         String toServer = player.getServer().getInfo().getName();
 
         if(fromServer == null) {
-            PigeonUtil.broadcast(new ProxyPlayerConnectPayload(player.getUniqueId(), player.getName(), toServer));
+            pigeon.broadcast(new ProxyPlayerConnectPayload(player.getUniqueId(), player.getName(), toServer));
         } else {
-            PigeonUtil.broadcast(new ProxyPlayerSwitchPayload(player.getUniqueId(), player.getName(), fromServer, toServer));
+            pigeon.broadcast(new ProxyPlayerSwitchPayload(player.getUniqueId(), player.getName(), fromServer, toServer));
         }
     }
 
@@ -61,21 +62,20 @@ public class Listeners implements Listener {
 
     @EventHandler
     public void onLogin(LoginEvent event) {
-        BungeeAudiences adventure = Pipeline.getPipeline().adventure();
-        UUID playerUUID = event.getConnection().getUniqueId();
+        UUID uuid = event.getConnection().getUniqueId();
+        String name = event.getConnection().getName();
 
-        Profile profile = Profile.getProfile(playerUUID);
+        Profile.getProfile(name, uuid).thenAccept(profile -> {
+            Punishment punishment = profile.api().getActiveBan();
 
-        Punishment punishment = profile.api().getActiveBan();
+            if (punishment != null) {
+                BungeeComponentSerializer serializer = BungeeComponentSerializer.get();
+                event.setCancelReason(serializer.serialize(Component.join(Component.newline(), getPunishmentMessage(punishment))));
+                event.setCancelled(true);
+            }
+        });
 
-        if (punishment != null) {
-            event.setCancelReason(adventure.Component.join(Component.newline(), getPunishmentMessage(punishment)));
-            event.setCancelReason(new ComponentBuilder("Test").color(ChatColor.RED).create());
-            event.setCancelled(true);
-            return;
-        }
-
-        // TODO: Load and Cache profile and do flame checks
+        // TODO: flame checks
 
 //        event.setCancelReason(new ComponentBuilder("Test").color(ChatColor.RED).create());
 //        event.setCancelled(true);
